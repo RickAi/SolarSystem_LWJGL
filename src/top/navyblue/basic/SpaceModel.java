@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+
 import static org.lwjgl.opengl.GL11.*;
 
 import top.navyblue.managers.RenderManager;
@@ -14,19 +16,27 @@ import top.navyblue.physics.PhysicsProvider;
 
 public abstract class SpaceModel {
 	
+	public Coordinate3D coord = new Coordinate3D();
 	public float prevPosX = 0, posX = 0, prevPosY = 0, posY = 0, prevPosZ = 0, posZ = 0;
 	public float prevRot = 0, rot = 0;
 	public final float size;
-	public final TextureUtil texture;
+	public final TextureUtil modelTexture;
 	protected List<Integer> glLists = new ArrayList<>();
 	
 	public final boolean hasAtmosphere = this instanceof IHasAtmosphere;
 	public final boolean hasRings = this instanceof IHasRings;
 	
 	public boolean ignoreLight = false, renderInside = false;
+	public static final int MODE_NORMAL = 0, MODE_SELECT = 1;
+	public int currentMode = MODE_NORMAL;
+	
+	private TextureUtil atmTexture;
+	private TextureUtil ringTexture;
+	private IHasAtmosphere atm;
+	private IHasRings rng;
 	
 	public SpaceModel(String textureName, float size) {
-		this.texture = new TextureUtil(textureName);
+		this.modelTexture = new TextureUtil(textureName);
 		this.size = size;
 	}
 	
@@ -48,19 +58,37 @@ public abstract class SpaceModel {
 	}
 	
 	public void init() throws Exception{
-		texture.prepare();
-		glLists.add(RenderManager.prepareSphere(texture.id, size));
+		modelTexture.prepare();
+		glLists.add(RenderManager.prepareSphere(modelTexture.id, size));
 		if(hasAtmosphere){
-			IHasAtmosphere atm = (IHasAtmosphere)this;
-			TextureUtil tex = atm.getAtmosphereTexture();
-			tex.prepare();
-			glLists.add(RenderManager.prepareSphere(tex.id, atm.getAtmosphereSize()));
+			atm = (IHasAtmosphere)this;
+			atmTexture = atm.getAtmosphereTexture();
+			atmTexture.prepare();
+			glLists.add(RenderManager.prepareSphere(atmTexture.id, atm.getAtmosphereSize()));
+		} 
+		if(hasRings){
+			rng = (IHasRings)this;
+			ringTexture = rng.getRingsTexture();
+			ringTexture.prepare();
+			glLists.add(RenderManager.prepareSquare(ringTexture.id, rng.getRingsSize()));
+		} 
+	}
+	
+	public void updateSize(){
+		glLists.clear();
+		float cross;
+		if(currentMode == MODE_NORMAL){
+			cross = 1.0f;
+		} else{
+			cross = 1.5f;
+		}
+		
+		glLists.add(RenderManager.prepareSphere(modelTexture.id, size*cross));
+		if(hasAtmosphere){
+			glLists.add(RenderManager.prepareSphere(atmTexture.id, atm.getAtmosphereSize()*cross));
 		}
 		if(hasRings){
-			IHasRings rng = (IHasRings)this;
-			TextureUtil tex = rng.getRingsTexture();
-			tex.prepare();
-			glLists.add(RenderManager.prepareSquare(tex.id, rng.getRingsSize()));
+			glLists.add(RenderManager.prepareSquare(ringTexture.id, rng.getRingsSize()*cross));
 		}
 	}
 	
@@ -69,6 +97,10 @@ public abstract class SpaceModel {
 		float y = prevPosY + (prevPosY - posY) * framePart;
 		float z = prevPosZ + (prevPosZ - posZ) * framePart;
 		
+		coord.x = posX;
+		coord.y = posY;
+		coord.z = posZ;
+		 
 		FloatBuffer lightPosition = BufferUtils.createFloatBuffer(4);
         lightPosition.put(-x).put(-y).put(-z).put(0.0f).flip();
 		float rot = prevRot + (prevRot - this.rot) * framePart;

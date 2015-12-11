@@ -1,7 +1,15 @@
 package top.navyblue.main;
 
+import static org.lwjgl.util.glu.GLU.gluPerspective;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+
 import javax.swing.JOptionPane;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -9,14 +17,13 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
+import org.lwjgl.util.glu.GLU;
+import org.lwjgl.util.vector.Vector3f;
 
 import top.navyblue.managers.Constants;
 import top.navyblue.managers.RenderManager;
-import top.navyblue.objects.Craft;
 import top.navyblue.objects.SolarSystem;
-import top.navyblue.physics.KeyListenProvider;
 import top.navyblue.physics.PhysicsException;
-import top.navyblue.physics.PhysicsProvider;
 
 public class SolarSystemMain {
 
@@ -24,19 +31,16 @@ public class SolarSystemMain {
 	private long utime;
 	private int fps;
 	private float tickPart;
-	
+
 	private boolean isExit = false;
-	
+
 	public static boolean isRunning = true;
 	public static boolean pauseMoment = false;
 	public static boolean physTicked = false;
-	
+
 	private float distance = -50, rotX = 45, rotZ = 0;
 	private int width, height;
 	private int clickX = 0, clickY = 0;
-	
-	private Craft craft;
-	private KeyListenProvider craftPhysicsProvider;
 
 	private KeyBind[] keyBinds = new KeyBind[] {
 			new KeyBind(Keyboard.KEY_ESCAPE) {
@@ -49,30 +53,29 @@ public class SolarSystemMain {
 				void pressed() {
 					pauseMoment = !pauseMoment;
 				}
-			}, new KeyBind(Keyboard.KEY_RIGHT){
+			}, new KeyBind(Keyboard.KEY_RIGHT) {
 				@Override
 				void pressed() {
-					craftPhysicsProvider.listen(1, 0, 0, 20);
+					try {
+						ss.selectNext();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 				}
-			}, new KeyBind(Keyboard.KEY_LEFT){
+			}, new KeyBind(Keyboard.KEY_LEFT) {
 				@Override
 				void pressed() {
-					craftPhysicsProvider.listen(-1, 0, 0, 20);
-				}
-			}, new KeyBind(Keyboard.KEY_UP){
-				@Override
-				void pressed() {
-					craftPhysicsProvider.listen(0, 0, -1, 20);
-				}
-			}, new KeyBind(Keyboard.KEY_DOWN){
-				@Override
-				void pressed() {
-					craftPhysicsProvider.listen(0, 0, 1, 20);
+					try {
+						ss.selectBefore();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 				}
 			}};
+	private SolarSystem ss;
 
-
-	private SolarSystemMain() {}
+	private SolarSystemMain() {
+	}
 
 	public static void main(String[] args) {
 		new SolarSystemMain().start();
@@ -80,7 +83,7 @@ public class SolarSystemMain {
 
 	private void start() {
 		try {
-			SolarSystem ss = initDisplay();
+			ss = initDisplay();
 
 			initVariables();
 
@@ -156,9 +159,7 @@ public class SolarSystemMain {
 
 	private SolarSystem initDisplay() throws LWJGLException, Exception {
 		SolarSystem ss = new SolarSystem();
-		craft = ss.getCraft();
-		craftPhysicsProvider = (KeyListenProvider) craft.getPhysics();
-		
+
 		Display.setTitle("Solar system");
 		Display.setDisplayMode(new DisplayMode(Constants.DISPLAY_WIDTH,
 				Constants.DISPLAY_HEIGHT));
@@ -166,14 +167,19 @@ public class SolarSystemMain {
 		Display.create(new PixelFormat(8, 8, 0, Constants.SAMPLES_COUNT));
 		if (Constants.ENABLE_VSYNC)
 			Display.setVSyncEnabled(true);
+		Display.setVSyncEnabled(true);
 		return ss;
 	}
 
 	private void updateMovement(SolarSystem ss, float tickPart) {
-		checkSize();
 		handleKeyboard();
 		handleMouse();
-		
+
+		checkSize();
+		renderScene();
+	}
+	
+	private void renderScene(){
 		GL11.glPushMatrix();
 		moveCamera();
 		GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
@@ -208,24 +214,84 @@ public class SolarSystemMain {
 			else
 				distance--;
 		}
+
 		if (Mouse.isButtonDown(0)) {
 			rotX += (clickY - Mouse.getY()) / 4f;
 			rotZ += (clickX - Mouse.getX()) / 4f;
+			
+			int select = select(Mouse.getX(), Mouse.getY());
+			System.out.println(select + "<---");
+			
 		} else if (Mouse.isButtonDown(1)) {
 			distance += (clickY - Mouse.getY()) / 4f;
 		}
+
 		clickX = Mouse.getX();
 		clickY = Mouse.getY();
+
 		if (distance > -10)
 			distance = -10;
 		else if (distance < -100)
 			distance = -100;
+	}
+	
+	public int select(int x, int y)
+	{
+		IntBuffer selBuffer = ByteBuffer.allocateDirect(1024).order(ByteOrder.nativeOrder()).asIntBuffer();
+		int[] buffer = new int[256];
+
+		IntBuffer viewBuffer = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder()).asIntBuffer();
+		int[] viewport = new int[4];
+
+		int hits;
+		GL11.glGetInteger(GL11.GL_VIEWPORT, viewBuffer);
+		viewBuffer.get(viewport);
+
+		GL11.glSelectBuffer(selBuffer);
+		GL11.glRenderMode(GL11.GL_SELECT);
+		GL11.glInitNames();
+		GL11.glPushName(0);
+		
+		GL11.glMatrixMode(GL11.GL_PROJECTION);
+		GL11.glPushMatrix();
+		{
+			GL11.glLoadIdentity();
+			GLU.gluPickMatrix( (float) x, (float) y, 5.0f, 5.0f,IntBuffer.wrap(viewport));
+			GLU.gluPerspective(60f, 800/600f,  0.1F, 1000F);
+			renderScene();
+		}
+		GL11.glPopMatrix();
+		hits = GL11.glRenderMode(GL11.GL_RENDER);
+
+		selBuffer.get(buffer);
+		if (hits > 0)
+		{
+			int choose = buffer[3];
+			int depth = buffer[1];
+
+			for (int i = 1; i < hits; i++)
+			{
+				if ((buffer[i * 4 + 1] < depth || choose == 0) && buffer[i * 4 + 3] != 0)
+				{
+					choose = buffer[i * 4 + 3];
+					depth = buffer[i * 4 + 1];
+				}
+			}
+
+			if (choose > 0)
+			{
+				return choose - 1;
+			}
+		}
+		return -1;
 	}
 
 	private static abstract class KeyBind {
 
 		private final int key;
 		private boolean spaceDown = false;
+		private boolean leftDown = false;
+		private boolean rightDown = false;
 
 		KeyBind(int key) {
 			this.key = key;
@@ -234,15 +300,27 @@ public class SolarSystemMain {
 		abstract void pressed();
 
 		void update() {
-			if (Keyboard.isKeyDown(key) && key == Keyboard.KEY_SPACE ) {
+			if (Keyboard.isKeyDown(key) && key == Keyboard.KEY_SPACE) {
 				if (!spaceDown) {
 					spaceDown = true;
 					pressed();
 				}
-			} else if(Keyboard.isKeyDown(key) && key != Keyboard.KEY_SPACE) {
+			} else if(Keyboard.isKeyDown(key) && key == Keyboard.KEY_LEFT){
+				if (!leftDown) {
+					leftDown = true;
 					pressed();
+				}
+			} else if(Keyboard.isKeyDown(key) && key == Keyboard.KEY_RIGHT){
+				if (!rightDown) {
+					rightDown = true;
+					pressed();
+				}
+			} else if (Keyboard.isKeyDown(key) && key != Keyboard.KEY_SPACE) {
+				pressed();
 			} else {
 				spaceDown = false;
+				leftDown = false;
+				rightDown = false;
 			}
 		}
 	}

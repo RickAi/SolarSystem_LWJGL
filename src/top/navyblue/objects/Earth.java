@@ -16,7 +16,7 @@ public class Earth extends SpaceModel implements IHasAtmosphere{
 		super("earth.png", 1.2f);
 		this.physics = new RotationPhysicsProvider(sun, 19, .01f, -5f);
 	}
-
+	
 	@Override
 	public TextureUtil getAtmosphereTexture() {
 		return clouds;

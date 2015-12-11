@@ -8,6 +8,7 @@ import org.lwjgl.BufferUtils;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.util.glu.GLU.*;
 
+import org.lwjgl.util.glu.Cylinder;
 import org.lwjgl.util.glu.Sphere;
 
 
@@ -42,24 +43,24 @@ public class RenderManager {
 	}
 	
 	public static void setupView(int width, int height) {
-		glPopAttrib();
-		glPushAttrib(GL_ENABLE_BIT);
-		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		
-		setupLighting();
-		
-		glClearDepth(1D);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		glDepthFunc(GL_LEQUAL);
+		glPopAttrib(); 
+		glPushAttrib(GL_ENABLE_BIT); 
+		glEnable(GL_TEXTURE_2D); 
+		glEnable(GL_BLEND); 
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
+		 
+		setupLighting(); 
+		 
+		glClearDepth(1D); 
+		glEnable(GL_DEPTH_TEST); 
+		glEnable(GL_CULL_FACE); 
+		glDepthFunc(GL_LEQUAL); 
 	    glViewport(0, 0, width, height);
-	    glMatrixMode(GL_PROJECTION);
-	    glLoadIdentity();
+	    glMatrixMode(GL_PROJECTION); 
+	    glLoadIdentity(); 
 	    gluPerspective(60F, (float)width / height, 0.1F, 1000F);
-	    glMatrixMode(GL_MODELVIEW);
-	    glLoadIdentity();
+	    glMatrixMode(GL_MODELVIEW); 
+	    glLoadIdentity(); 
 	}
 	
 	public static void init(int width, int height) {
@@ -75,6 +76,19 @@ public class RenderManager {
 		glNewList(list, GL_COMPILE);
 		glBindTexture(GL_TEXTURE_2D, texId);
 		sphere.draw(size, Constants.SPHERE_SLICES, Constants.SPHERE_SLICES);
+		glEndList();
+		return list;
+	}
+	
+	public static int prepareCylinder(int texId, float baseRadius, float topRadius, float height){
+		int list = glGenLists(1);
+		glNewList(list, GL_COMPILE);
+		glBindTexture(GL_TEXTURE_2D, texId);
+		Cylinder cylinder = new Cylinder();
+		cylinder.setDrawStyle(GLU_FILL);
+		cylinder.setTextureFlag(true);
+		cylinder.setNormals(GLU_SMOOTH);
+		cylinder.draw(baseRadius, topRadius, height, Constants.SPHERE_SLICES, Constants.SPHERE_SLICES);
 		glEndList();
 		return list;
 	}
