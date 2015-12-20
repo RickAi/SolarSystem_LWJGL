@@ -1,6 +1,7 @@
 package top.navyblue.managers;
 
 
+
 public class Constants {
 	
 	public static int DISPLAY_WIDTH = 800;

@@ -12,7 +12,7 @@ public class SolarSystem {
 
 	public final List<SpaceModel> models = new ArrayList<>();
 	public SpaceModel selectedModel;
-	public int selectedIndex = -1;
+	public int selectedIndex = 0;
 	public List<SpaceModel> selectModels = new ArrayList<SpaceModel>();
 	public final PhysicsThread physics = new PhysicsThread(this);
 
@@ -44,30 +44,48 @@ public class SolarSystem {
 		physics.start();
 		for (SpaceModel model : models)
 			model.init();
+		selectCurrent(0);
 	}
-
+	
+	public void addSecondaryPlanet() throws Exception{
+		AnonymousPlanet planet = new AnonymousPlanet(selectedModel, selectedModel.size);
+		planet.init();
+		models.add(planet);
+		selectModels.add(planet);
+	}
+	
 	public void selectNext() throws Exception {
-		selectedModel.currentMode = SpaceModel.MODE_NORMAL;
-		selectedModel.updateSize();
-
+		unselectCurrent();
+		
 		increaseIndex();
 
-		selectedModel = selectModels.get(selectedIndex);
-		selectedModel.currentMode = SpaceModel.MODE_SELECT;
-		selectedModel.updateSize();
+		selectCurrent(selectedIndex);
 	}
 
 	public void selectBefore() throws Exception {
-		selectedModel.currentMode = SpaceModel.MODE_NORMAL;
-		selectedModel.updateSize();
+		unselectCurrent();
 
 		decreaseIndex();
 
-		selectedModel = selectModels.get(selectedIndex);
+		selectCurrent(selectedIndex);
+	}
+	
+	public void selectPlanet(int toSelectIndex){
+		unselectCurrent();
+		selectCurrent(toSelectIndex);
+	}
+	
+	public void selectCurrent(int toSelectIndex){
+		selectedModel = selectModels.get(toSelectIndex);
 		selectedModel.currentMode = SpaceModel.MODE_SELECT;
 		selectedModel.updateSize();
 	}
-
+	
+	private void unselectCurrent(){
+		selectedModel.currentMode = SpaceModel.MODE_NORMAL;
+		selectedModel.updateSize();
+	}
+	
 	public void render(float framePart) {
 		for (int i = 0; i < models.size(); i++) {
 			SpaceModel model = models.get(i);

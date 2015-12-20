@@ -1,24 +1,20 @@
 package top.navyblue.main;
 
-import static org.lwjgl.util.glu.GLU.gluPerspective;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.HashMap;
 
 import javax.swing.JOptionPane;
 
-import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
-import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.util.glu.GLU;
-import org.lwjgl.util.vector.Vector3f;
+import static org.lwjgl.opengl.GL11.*;
 
 import top.navyblue.managers.Constants;
 import top.navyblue.managers.RenderManager;
@@ -26,6 +22,18 @@ import top.navyblue.objects.SolarSystem;
 import top.navyblue.physics.PhysicsException;
 
 public class SolarSystemMain {
+
+	public static HashMap<Integer, String> pureColors = new HashMap<Integer, String>();
+
+	static {
+		pureColors.put(0, "blue.png");
+		pureColors.put(1, "deep_blue.png");
+		pureColors.put(2, "green.png");
+		pureColors.put(3, "light_blue.png");
+		pureColors.put(4, "pink.png");
+		pureColors.put(5, "red.png");
+		pureColors.put(6, "yellow.png");
+	}
 
 	private long cachedMills;
 	private long utime;
@@ -71,7 +79,17 @@ public class SolarSystemMain {
 						e.printStackTrace();
 					}
 				}
-			}};
+			}, new KeyBind(Keyboard.KEY_EQUALS) {
+				@Override
+				void pressed() {
+					try {
+						ss.addSecondaryPlanet();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			} };
+
 	private SolarSystem ss;
 
 	private SolarSystemMain() {
@@ -178,13 +196,13 @@ public class SolarSystemMain {
 		checkSize();
 		renderScene();
 	}
-	
-	private void renderScene(){
-		GL11.glPushMatrix();
+
+	private void renderScene() {
+		glPushMatrix();
 		moveCamera();
-		GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT);
 		ss.render(tickPart);
-		GL11.glPopMatrix();
+		glPopMatrix();
 	}
 
 	private void checkSize() {
@@ -196,9 +214,9 @@ public class SolarSystemMain {
 	}
 
 	private void moveCamera() {
-		GL11.glTranslatef(0, 0, distance);
-		GL11.glRotatef(rotX, -1, 0, 0);
-		GL11.glRotatef(rotZ, 0, 0, -1);
+		glTranslatef(0, 0, distance);
+		glRotatef(rotX, -1, 0, 0);
+		glRotatef(rotZ, 0, 0, -1);
 	}
 
 	private void handleKeyboard() {
@@ -218,10 +236,11 @@ public class SolarSystemMain {
 		if (Mouse.isButtonDown(0)) {
 			rotX += (clickY - Mouse.getY()) / 4f;
 			rotZ += (clickX - Mouse.getX()) / 4f;
-			
-			int select = select(Mouse.getX(), Mouse.getY());
-			System.out.println(select + "<---");
-			
+
+			int index = select(Mouse.getX(), Mouse.getY());
+			if (index != -1) {
+				ss.selectPlanet(index);
+			}
 		} else if (Mouse.isButtonDown(1)) {
 			distance += (clickY - Mouse.getY()) / 4f;
 		}
@@ -234,52 +253,63 @@ public class SolarSystemMain {
 		else if (distance < -100)
 			distance = -100;
 	}
-	
-	public int select(int x, int y)
-	{
-		IntBuffer selBuffer = ByteBuffer.allocateDirect(1024).order(ByteOrder.nativeOrder()).asIntBuffer();
+
+	public int select(int x, int y) {
+		IntBuffer selBuffer = ByteBuffer.allocateDirect(1024)
+				.order(ByteOrder.nativeOrder()).asIntBuffer();
 		int[] buffer = new int[256];
 
-		IntBuffer viewBuffer = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder()).asIntBuffer();
+		IntBuffer viewBuffer = ByteBuffer.allocateDirect(64)
+				.order(ByteOrder.nativeOrder()).asIntBuffer();
+		// The size of the viewport. [0] Is <x>, [1] Is <y>, [2] Is <width>, [3] Is <height> 
 		int[] viewport = new int[4];
 
+		// The number of "hits" (objects within the pick area). 
 		int hits;
-		GL11.glGetInteger(GL11.GL_VIEWPORT, viewBuffer);
+		// Get the viewport info 
+		glGetInteger(GL_VIEWPORT, viewBuffer);
 		viewBuffer.get(viewport);
 
-		GL11.glSelectBuffer(selBuffer);
-		GL11.glRenderMode(GL11.GL_SELECT);
-		GL11.glInitNames();
-		GL11.glPushName(0);
-		
-		GL11.glMatrixMode(GL11.GL_PROJECTION);
-		GL11.glPushMatrix();
+		// Set the buffer that OpenGL uses for selection to our buffer 
+		glSelectBuffer(selBuffer);
+		// Change to selection mode 
+		glRenderMode(GL_SELECT);
+		// Initialize the name stack (used for identifying which object was selected) 
+		glInitNames();
+		glPushName(0);
+
+		glMatrixMode(GL_PROJECTION);
+		glPushMatrix();
 		{
-			GL11.glLoadIdentity();
-			GLU.gluPickMatrix( (float) x, (float) y, 5.0f, 5.0f,IntBuffer.wrap(viewport));
-			GLU.gluPerspective(60f, 800/600f,  0.1F, 1000F);
+			glLoadIdentity();
+			/*  create 5x5 pixel picking region near cursor location */ 
+			GLU.gluPickMatrix((float) x, (float) y, 5.0f, 5.0f,
+					IntBuffer.wrap(viewport));
+			GLU.gluPerspective(60f, 800 / 600f, 0.1F, 1000F);
 			renderScene();
 		}
-		GL11.glPopMatrix();
-		hits = GL11.glRenderMode(GL11.GL_RENDER);
+		glPopMatrix();
+		// Exit selection mode and return to render mode, returns number selected 
+		hits = glRenderMode(GL_RENDER);
 
 		selBuffer.get(buffer);
-		if (hits > 0)
-		{
+		// Objects Were Drawn Where The Mouse Was 
+		if (hits > 0) {
+			// If There Were More Than 0 Hits 
 			int choose = buffer[3];
 			int depth = buffer[1];
 
-			for (int i = 1; i < hits; i++)
-			{
-				if ((buffer[i * 4 + 1] < depth || choose == 0) && buffer[i * 4 + 3] != 0)
-				{
+			for (int i = 1; i < hits; i++) {
+				// Loop Through All The Detected Hits 
+                // If This Object Is Closer To Us Than The One We Have Selected 
+				if ((buffer[i * 4 + 1] < depth || choose == 0)
+						&& buffer[i * 4 + 3] != 0) {
 					choose = buffer[i * 4 + 3];
 					depth = buffer[i * 4 + 1];
 				}
 			}
 
-			if (choose > 0)
-			{
+			if (choose > 0) {
 				return choose - 1;
 			}
 		}
@@ -289,9 +319,8 @@ public class SolarSystemMain {
 	private static abstract class KeyBind {
 
 		private final int key;
-		private boolean spaceDown = false;
-		private boolean leftDown = false;
-		private boolean rightDown = false;
+		private boolean isKeyDown = false;
+		private boolean isAddDown = false;
 
 		KeyBind(int key) {
 			this.key = key;
@@ -300,27 +329,19 @@ public class SolarSystemMain {
 		abstract void pressed();
 
 		void update() {
-			if (Keyboard.isKeyDown(key) && key == Keyboard.KEY_SPACE) {
-				if (!spaceDown) {
-					spaceDown = true;
+			if (Keyboard.isKeyDown(key) && key == Keyboard.KEY_EQUALS) {
+				if (!isAddDown) {
+					isAddDown = true;
 					pressed();
 				}
-			} else if(Keyboard.isKeyDown(key) && key == Keyboard.KEY_LEFT){
-				if (!leftDown) {
-					leftDown = true;
+			} else if (Keyboard.isKeyDown(key)) {
+				if (!isKeyDown) {
+					isKeyDown = true;
 					pressed();
 				}
-			} else if(Keyboard.isKeyDown(key) && key == Keyboard.KEY_RIGHT){
-				if (!rightDown) {
-					rightDown = true;
-					pressed();
-				}
-			} else if (Keyboard.isKeyDown(key) && key != Keyboard.KEY_SPACE) {
-				pressed();
 			} else {
-				spaceDown = false;
-				leftDown = false;
-				rightDown = false;
+				isKeyDown = false;
+				isAddDown = false;
 			}
 		}
 	}

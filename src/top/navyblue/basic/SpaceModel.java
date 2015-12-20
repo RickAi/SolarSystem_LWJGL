@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.lwjgl.BufferUtils;
-import org.lwjgl.opengl.GL11;
 
 import static org.lwjgl.opengl.GL11.*;
 
@@ -112,14 +111,20 @@ public abstract class SpaceModel {
 			glDisable(GL_LIGHTING);
 		else
 			glLight(GL_LIGHT0, GL_POSITION, lightPosition);
+		
+		// change the location and the rotate angle
 		glTranslatef(x, y, z);
 		glRotatef(rot, 0, 0, 1);
+		
+		// call the display list
 		for(int list : glLists)
 			glCallList(list);
+		
 		if(ignoreLight)
 			glEnable(GL_LIGHTING);
 		if(renderInside)
 			glEnable(GL_CULL_FACE);
+		
 		glPopMatrix();
 	}
 	
