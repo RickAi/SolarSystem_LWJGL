@@ -4,8 +4,8 @@ package top.navyblue.managers;
 
 public class Constants {
 	
-	public static int DISPLAY_WIDTH = 800;
-	public static int DISPLAY_HEIGHT = 600;
+	public static float DISPLAY_WIDTH = 800;
+	public static float DISPLAY_HEIGHT = 600;
 	
 	public static String TEXTURE_DIR = "textures";
 	

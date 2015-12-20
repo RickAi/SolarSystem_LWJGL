@@ -58,7 +58,7 @@ public class RenderManager {
 	    glViewport(0, 0, width, height);
 	    glMatrixMode(GL_PROJECTION); 
 	    glLoadIdentity(); 
-	    gluPerspective(60F, (float)width / height, 0.1F, 1000F);
+	    gluPerspective(60F, Constants.DISPLAY_WIDTH / Constants.DISPLAY_HEIGHT, 0.1F, 1000F);
 	    glMatrixMode(GL_MODELVIEW); 
 	    glLoadIdentity(); 
 	}

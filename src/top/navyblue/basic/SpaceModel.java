@@ -15,9 +15,9 @@ import top.navyblue.physics.PhysicsProvider;
 
 public abstract class SpaceModel {
 	
-	public Coordinate3D coord = new Coordinate3D();
 	public float prevPosX = 0, posX = 0, prevPosY = 0, posY = 0, prevPosZ = 0, posZ = 0;
 	public float prevRot = 0, rot = 0;
+	
 	public final float size;
 	public final TextureUtil modelTexture;
 	protected List<Integer> glLists = new ArrayList<>();
@@ -96,10 +96,6 @@ public abstract class SpaceModel {
 		float y = prevPosY + (prevPosY - posY) * framePart;
 		float z = prevPosZ + (prevPosZ - posZ) * framePart;
 		
-		coord.x = posX;
-		coord.y = posY;
-		coord.z = posZ;
-		 
 		FloatBuffer lightPosition = BufferUtils.createFloatBuffer(4);
         lightPosition.put(-x).put(-y).put(-z).put(0.0f).flip();
 		float rot = prevRot + (prevRot - this.rot) * framePart;
@@ -120,8 +116,6 @@ public abstract class SpaceModel {
 		for(int list : glLists)
 			glCallList(list);
 		
-		if(ignoreLight)
-			glEnable(GL_LIGHTING);
 		if(renderInside)
 			glEnable(GL_CULL_FACE);
 		

@@ -13,8 +13,8 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.PixelFormat;
-import org.lwjgl.util.glu.GLU;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.util.glu.GLU.*;
 
 import top.navyblue.managers.Constants;
 import top.navyblue.managers.RenderManager;
@@ -179,8 +179,8 @@ public class SolarSystemMain {
 		SolarSystem ss = new SolarSystem();
 
 		Display.setTitle("Solar system");
-		Display.setDisplayMode(new DisplayMode(Constants.DISPLAY_WIDTH,
-				Constants.DISPLAY_HEIGHT));
+		Display.setDisplayMode(new DisplayMode((int)Constants.DISPLAY_WIDTH,
+				(int)Constants.DISPLAY_HEIGHT));
 		Display.setResizable(true);
 		Display.create(new PixelFormat(8, 8, 0, Constants.SAMPLES_COUNT));
 		if (Constants.ENABLE_VSYNC)
@@ -282,10 +282,10 @@ public class SolarSystemMain {
 		glPushMatrix();
 		{
 			glLoadIdentity();
-			/*  create 5x5 pixel picking region near cursor location */ 
-			GLU.gluPickMatrix((float) x, (float) y, 5.0f, 5.0f,
+			// create 5x5 pixel picking region near cursor location
+			gluPickMatrix((float) x, (float) y, 5.0f, 5.0f,
 					IntBuffer.wrap(viewport));
-			GLU.gluPerspective(60f, 800 / 600f, 0.1F, 1000F);
+			gluPerspective(60f, Constants.DISPLAY_WIDTH / Constants.DISPLAY_HEIGHT, 0.1F, 1000F);
 			renderScene();
 		}
 		glPopMatrix();
